@@ -2,11 +2,7 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  connectionString: process.env.DATABASE_URL,
 
   ssl: {
     rejectUnauthorized: false,
@@ -17,7 +13,7 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-// Test connection
+// Test database connection
 pool.connect((err, client, release) => {
   if (err) {
     console.error('❌ Database connection failed:', err.message);
@@ -25,9 +21,13 @@ pool.connect((err, client, release) => {
   }
 
   console.log('✅ PostgreSQL connected successfully');
-  release();
+
+  if (release) {
+    release();
+  }
 });
 
+// Handle unexpected database errors
 pool.on('error', (err) => {
   console.error('Unexpected database error:', err);
 });
