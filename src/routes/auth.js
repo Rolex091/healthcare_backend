@@ -5,6 +5,7 @@ const { body } = require('express-validator');
 const authController = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
+// ✅ SIGNUP
 router.post(
   '/signup',
   [
@@ -16,6 +17,7 @@ router.post(
   authController.signup
 );
 
+// ✅ LOGIN
 router.post(
   '/login',
   [
@@ -25,10 +27,27 @@ router.post(
   authController.login
 );
 
-router.post('/request-otp', authController.requestOtp);
-router.post('/verify-otp', authController.verifyOtp);
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
-router.post('/logout', authenticate, authController.logout);
+// ✅ OTP ROUTES (ONLY IF EXIST)
+if (authController.requestOtp) {
+  router.post('/request-otp', authController.requestOtp);
+}
+
+if (authController.verifyOtp) {
+  router.post('/verify-otp', authController.verifyOtp);
+}
+
+// ✅ PASSWORD RESET (ONLY IF EXIST)
+if (authController.forgotPassword) {
+  router.post('/forgot-password', authController.forgotPassword);
+}
+
+if (authController.resetPassword) {
+  router.post('/reset-password', authController.resetPassword);
+}
+
+// ✅ LOGOUT (ONLY IF EXIST)
+if (authController.logout) {
+  router.post('/logout', authenticate, authController.logout);
+}
 
 module.exports = router;
