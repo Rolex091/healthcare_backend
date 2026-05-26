@@ -5,7 +5,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 
   ssl: {
-    rejectUnauthorized: false,
+    rejectUnauthorized: false, // ✅ Supabase ku mandatory
   },
 
   max: 20,
@@ -13,23 +13,21 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-// Test database connection
-pool.connect((err, client, release) => {
-  if (err) {
+// ✅ Test DB connection (SAFE)
+(async () => {
+  try {
+    const client = await pool.connect();
+    console.log('✅ PostgreSQL connected successfully');
+    client.release();
+  } catch (err) {
     console.error('❌ Database connection failed:', err.message);
-    process.exit(1);
+    // ❗ remove process.exit → server crash avoid
   }
+})();
 
-  console.log('✅ PostgreSQL connected successfully');
-
-  if (release) {
-    release();
-  }
-});
-
-// Handle unexpected database errors
+// ✅ Handle unexpected errors
 pool.on('error', (err) => {
-  console.error('Unexpected database error:', err);
+  console.error('🔥 Unexpected DB error:', err.message);
 });
 
 module.exports = pool;

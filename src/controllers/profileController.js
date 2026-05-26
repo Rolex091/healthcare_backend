@@ -1,18 +1,20 @@
 // src/controllers/profileController.js — Profile management
 const pool = require('../config/db');
-const path = require('path');
 
 // ─── GET /profile/:userId ────────────────────────────────────────────────────
 exports.getProfile = async (req, res, next) => {
   try {
     const { userId } = req.params;
 
-    // Users can only see their own profile (unless we add admin later)
     if (req.user.id !== userId) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    const userResult = await pool.query('SELECT id, email, phone, role FROM users WHERE id = $1', [userId]);
+    const userResult = await pool.query(
+      'SELECT id, email, phone, role FROM users WHERE id = $1',
+      [userId]
+    );
+
     if (userResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -20,16 +22,26 @@ exports.getProfile = async (req, res, next) => {
     const user = userResult.rows[0];
 
     let profile = null;
+
     if (user.role === 'patient') {
-      const r = await pool.query('SELECT * FROM patient_profiles WHERE user_id = $1', [userId]);
+      const r = await pool.query(
+        'SELECT * FROM patient_profiles WHERE user_id = $1',
+        [userId]
+      );
       profile = r.rows[0] || null;
-    } else if (user.role === 'doctor') {
-      const r = await pool.query('SELECT * FROM doctor_profiles WHERE user_id = $1', [userId]);
+    }
+
+    if (user.role === 'doctor') {
+      const r = await pool.query(
+        'SELECT * FROM doctor_profiles WHERE user_id = $1',
+        [userId]
+      );
       profile = r.rows[0] || null;
     }
 
     res.json({ success: true, data: { ...user, profile } });
   } catch (err) {
+    console.error(err);
     next(err);
   }
 };
@@ -39,19 +51,35 @@ exports.updateProfile = async (req, res, next) => {
   try {
     const { userId } = req.params;
 
+    console.log("USER ID:", userId);
+    console.log("BODY DATA:", req.body); // 🔥 DEBUG
+
     if (req.user.id !== userId) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    const userResult = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+    const userResult = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [userId]
+    );
+
     if (userResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     const role = userResult.rows[0].role;
 
+    // ───── PATIENT ─────
     if (role === 'patient') {
-      const { name, age, gender, blood_group, medical_history, mobile, email } = req.body;
+      const {
+        name,
+        age,
+        gender,
+        blood_group,
+        medical_history,
+        mobile,
+        email
+      } = req.body;
 
       const result = await pool.query(
         `UPDATE patient_profiles
@@ -65,14 +93,30 @@ exports.updateProfile = async (req, res, next) => {
              updated_at = NOW()
          WHERE user_id = $8
          RETURNING *`,
-        [name, age, gender, blood_group, medical_history, mobile, email, userId]
+        [
+          name ?? null,
+          age ?? null,
+          gender ?? null,
+          blood_group ?? null,
+          medical_history ?? null,
+          mobile ?? null,
+          email ?? null,
+          userId
+        ]
       );
 
       return res.json({ success: true, data: result.rows[0] });
     }
 
+    // ───── DOCTOR ─────
     if (role === 'doctor') {
-      const { name, specialization, experience_years, bio, phone } = req.body;
+      const {
+        name,
+        specialization,
+        experience_years,
+        bio,
+        phone
+      } = req.body;
 
       const result = await pool.query(
         `UPDATE doctor_profiles
@@ -84,7 +128,14 @@ exports.updateProfile = async (req, res, next) => {
              updated_at = NOW()
          WHERE user_id = $6
          RETURNING *`,
-        [name, specialization, experience_years, bio, phone, userId]
+        [
+          name ?? null,
+          specialization ?? null,
+          experience_years ?? null,
+          bio ?? null,
+          phone ?? null,
+          userId
+        ]
       );
 
       return res.json({ success: true, data: result.rows[0] });
@@ -92,6 +143,7 @@ exports.updateProfile = async (req, res, next) => {
 
     res.status(400).json({ success: false, message: 'Unknown role' });
   } catch (err) {
+    console.error("UPDATE ERROR:", err); // 🔥 DEBUG
     next(err);
   }
 };
@@ -107,7 +159,9 @@ exports.uploadCertificate = async (req, res, next) => {
     const fileUrl = `/uploads/${req.file.filename}`;
 
     await pool.query(
-      'UPDATE doctor_profiles SET degree_certificate_url = $1, updated_at = NOW() WHERE user_id = $2',
+      `UPDATE doctor_profiles 
+       SET degree_certificate_url = $1, updated_at = NOW() 
+       WHERE user_id = $2`,
       [fileUrl, userId]
     );
 
@@ -117,6 +171,7 @@ exports.uploadCertificate = async (req, res, next) => {
       data: { fileUrl },
     });
   } catch (err) {
+    console.error(err);
     next(err);
   }
 };
