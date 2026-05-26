@@ -181,10 +181,15 @@ exports.bookAppointment = async (req, res, next) => {
     });
 
     // Schedule reminder (insert into reminders table)
+    const scheduledAt = new Date(`${slot.date}T${slot.time}:00`);
+
     await pool.query(
       `INSERT INTO reminders (appointment_id, scheduled_at, status)
-       VALUES ($1, $2 - INTERVAL '30 minutes', 'pending')`,
-      [appointmentId, `${slot.date} ${slot.time}`]
+   VALUES ($1, $2, 'pending')`,
+      [
+        appointmentId,
+        new Date(scheduledAt.getTime() - 30 * 60 * 1000),
+      ]
     );
 
     res.status(201).json({
