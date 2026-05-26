@@ -113,7 +113,7 @@ exports.signup = async (req, res, next) => {
       [userId, otp, email, expiryTime]
     );
 
-    await sendOTPEmail(email, otp, 'verification');
+    //await sendOTPEmail(email, otp, 'verification');
 
     res.status(201).json({
       success: true,
@@ -162,7 +162,7 @@ exports.login = async (req, res, next) => {
        VALUES ($1,$2,$3,$4)`,
       [user.id, otp, email, expiryTime]
     );
-    await sendOTPEmail(email, otp, 'login');
+    //await sendOTPEmail(email, otp, 'login');
 
     res.json({
       success: true,
@@ -194,7 +194,7 @@ exports.requestOtp = async (req, res, next) => {
       [userId, otp, email, expiryTime]
     );
 
-    await sendOTPEmail(email, otp, purpose || 'verification');
+    //await sendOTPEmail(email, otp, purpose || 'verification');
 
     res.json({ success: true, message: 'OTP sent to email' });
   } catch (err) {
@@ -276,7 +276,7 @@ exports.forgotPassword = async (req, res, next) => {
       [userId, otp, email, expiryTime]
     );
 
-    await sendOTPEmail(email, otp, 'forgot_password');
+    //await sendOTPEmail(email, otp, 'forgot_password');
 
     res.json({ success: true, message: 'If the email exists, a reset OTP has been sent.' });
   } catch (err) {
