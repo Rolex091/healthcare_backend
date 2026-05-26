@@ -4,21 +4,18 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const nodemailer = require('nodemailer');
-const { validationResult } = require('express-validator');
 const pool = require('../config/db');
 
-// Email transporter
+// ✅ TRANSPORTER (GMAIL BEST)
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false, // ⚠️ change to false (important fix)
+  service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
-// Generate OTP
+// OTP GENERATE
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -30,17 +27,22 @@ function signToken(userId, role) {
   });
 }
 
-// Send OTP email
-async function sendOTPEmail(email, otp, purpose = 'verification') {
-  await transporter.sendMail({
-    from: `"HEALTH CARE+" <${process.env.SMTP_USER}>`,
-    to: email,
-    subject: `Your OTP Code`,
-    html: `<h2>Your OTP is: ${otp}</h2><p>Valid for 10 minutes</p>`,
-  });
+// ✅ SEND OTP (NON-BLOCKING)
+function sendOTPEmail(email, otp) {
+  transporter
+    .sendMail({
+      from: `"HEALTH CARE+" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Your OTP Code',
+      html: `<h2>Your OTP is: ${otp}</h2><p>Valid for 10 minutes</p>`,
+    })
+    .then(() => console.log('OTP email sent'))
+    .catch((err) => console.log('Email error:', err.message));
 }
 
-// SIGNUP
+// ==========================
+// ✅ SIGNUP
+// ==========================
 exports.signup = async (req, res) => {
   try {
     const { email, password, role, name, phone } = req.body;
@@ -66,20 +68,27 @@ exports.signup = async (req, res) => {
     const otp = generateOTP();
 
     await pool.query(
-      'INSERT INTO otp_verifications (user_id,otp_code,contact,expiry_time) VALUES ($1,$2,$3,NOW()+INTERVAL \'10 min\')',
+      'INSERT INTO otp_verifications (user_id,otp_code,contact,expiry_time) VALUES ($1,$2,$3,NOW()+INTERVAL \'10 minutes\')',
       [userId, otp, email]
     );
 
-    await sendOTPEmail(email, otp); // ✅ ENABLED
+    // ✅ async email (NO await)
+    sendOTPEmail(email, otp);
 
-    res.json({ success: true, userId, message: 'OTP sent' });
+    res.json({
+      success: true,
+      userId,
+      message: 'OTP sent to email',
+    });
   } catch (err) {
     console.log(err);
-    res.status(500).json({ message: 'Error signup' });
+    res.status(500).json({ message: 'Signup error' });
   }
 };
 
-// LOGIN
+// ==========================
+// ✅ LOGIN
+// ==========================
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -99,20 +108,27 @@ exports.login = async (req, res) => {
     const otp = generateOTP();
 
     await pool.query(
-      'INSERT INTO otp_verifications (user_id,otp_code,contact,expiry_time) VALUES ($1,$2,$3,NOW()+INTERVAL \'10 min\')',
+      'INSERT INTO otp_verifications (user_id,otp_code,contact,expiry_time) VALUES ($1,$2,$3,NOW()+INTERVAL \'10 minutes\')',
       [user.id, otp, email]
     );
 
-    await sendOTPEmail(email, otp); // ✅ ENABLED
+    // ✅ async email
+    sendOTPEmail(email, otp);
 
-    res.json({ success: true, userId: user.id, message: 'OTP sent' });
+    res.json({
+      success: true,
+      userId: user.id,
+      message: 'OTP sent to email',
+    });
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: 'Login error' });
   }
 };
 
-// VERIFY OTP
+// ==========================
+// ✅ VERIFY OTP
+// ==========================
 exports.verifyOtp = async (req, res) => {
   try {
     const { userId, otp } = req.body;
@@ -123,7 +139,7 @@ exports.verifyOtp = async (req, res) => {
     );
 
     if (!result.rows.length) {
-      return res.status(400).json({ message: 'No OTP' });
+      return res.status(400).json({ message: 'No OTP found' });
     }
 
     const record = result.rows[0];
@@ -142,7 +158,10 @@ exports.verifyOtp = async (req, res) => {
 
     const token = signToken(userId, user.rows[0].role);
 
-    res.json({ success: true, token });
+    res.json({
+      success: true,
+      token,
+    });
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: 'OTP verify error' });
