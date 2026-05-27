@@ -6,12 +6,12 @@ const { v4: uuidv4 } = require('uuid');
 const nodemailer = require('nodemailer');
 const pool = require('../config/db');
 
-// ✅ TRANSPORTER (GMAIL BEST)
+// ✅ FIXED TRANSPORTER
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.SMTP_USER,   // ✅ CHANGED
+    pass: process.env.SMTP_PASS,   // ✅ CHANGED
   },
 });
 
@@ -27,11 +27,11 @@ function signToken(userId, role) {
   });
 }
 
-// ✅ SEND OTP (NON-BLOCKING)
+// ✅ SEND OTP (NON-BLOCKING + SAFE)
 function sendOTPEmail(email, otp) {
   transporter
     .sendMail({
-      from: `"HEALTH CARE+" <${process.env.EMAIL_USER}>`,
+      from: `"HEALTH CARE+" <${process.env.SMTP_USER}>`, // ✅ CHANGED
       to: email,
       subject: 'Your OTP Code',
       html: `<h2>Your OTP is: ${otp}</h2><p>Valid for 10 minutes</p>`,
@@ -72,7 +72,7 @@ exports.signup = async (req, res) => {
       [userId, otp, email]
     );
 
-    // ✅ async email (NO await)
+    // ✅ NON-BLOCKING EMAIL
     sendOTPEmail(email, otp);
 
     res.json({
@@ -112,7 +112,7 @@ exports.login = async (req, res) => {
       [user.id, otp, email]
     );
 
-    // ✅ async email
+    // ✅ NON-BLOCKING EMAIL
     sendOTPEmail(email, otp);
 
     res.json({
