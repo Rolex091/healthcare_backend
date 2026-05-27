@@ -73,8 +73,9 @@ exports.signup = async (req, res) => {
     );
 
     // ✅ NON-BLOCKING EMAIL
-    sendOTPEmail(email, otp);
-
+    setImmediate(() => {
+      sendOTPEmail(email, otp);
+    });
     res.json({
       success: true,
       userId,
@@ -112,8 +113,9 @@ exports.login = async (req, res) => {
       [user.id, otp, email]
     );
 
-    // ✅ NON-BLOCKING EMAIL
-    sendOTPEmail(email, otp);
+    setImmediate(() => {
+      sendOTPEmail(email, otp);
+    });
 
     res.json({
       success: true,
