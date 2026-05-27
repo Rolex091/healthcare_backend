@@ -11,15 +11,13 @@ const pool = require('../config/db');
 // BREVO SMTP CONFIG
 // ==========================
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false,
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
 });
 
 // ==========================
@@ -46,24 +44,20 @@ function signToken(userId, role) {
 // SEND OTP EMAIL
 // ==========================
 async function sendOTPEmail(email, otp) {
-  try {
-    await transporter.sendMail({
-      from: `"HEALTH CARE+" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: 'HEALTH CARE+ OTP',
-      html: `
-        <div style="font-family:Arial;padding:20px">
-          <h2>HEALTH CARE+</h2>
-          <h1>${otp}</h1>
-          <p>Your OTP is valid for 10 minutes.</p>
-        </div>
-      `,
-    });
-
-    console.log('✅ OTP email sent');
-  } catch (err) {
-    console.log('❌ Email error:', err.message);
-  }
+  transporter.sendMail({
+    from: `"HEALTH CARE+" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: 'HEALTH CARE+ OTP',
+    html: `
+      <div style="font-family:Arial;padding:20px">
+        <h2>HEALTH CARE+</h2>
+        <h1>${otp}</h1>
+        <p>Your OTP is valid for 10 minutes.</p>
+      </div>
+    `,
+  })
+    .then(() => console.log('✅ OTP email sent'))
+    .catch((err) => console.log('❌ Email error:', err.message));
 }
 
 // ==========================
