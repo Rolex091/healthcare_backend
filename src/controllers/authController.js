@@ -3,11 +3,22 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const { Resend } = require('resend');
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const nodemailer = require('nodemailer');
 
 const pool = require('../config/db');
+
+// ==========================
+// BREVO SMTP CONFIG
+// ==========================
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
 // ==========================
 // OTP GENERATE
@@ -34,8 +45,8 @@ function signToken(userId, role) {
 // ==========================
 async function sendOTPEmail(email, otp) {
   try {
-    await resend.emails.send({
-      from: 'onboarding@resend.dev',
+    await transporter.sendMail({
+      from: `"HEALTH CARE+" <${process.env.SMTP_USER}>`,
       to: email,
       subject: 'HEALTH CARE+ OTP',
       html: `
@@ -49,7 +60,7 @@ async function sendOTPEmail(email, otp) {
 
     console.log('✅ OTP email sent');
   } catch (err) {
-    console.log('❌ Resend error:', err.message);
+    console.log('❌ Email error:', err.message);
   }
 }
 
@@ -275,6 +286,7 @@ exports.verifyOtp = async (req, res) => {
       message: 'OTP verified',
       token,
       role,
+      userId,
     });
 
   } catch (err) {
