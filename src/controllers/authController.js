@@ -4,10 +4,34 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { Resend } = require('resend');
+
 const resend = new Resend(process.env.RESEND_API_KEY);
+
 const pool = require('../config/db');
 
-// ✅ TRANSPORTER
+// ==========================
+// OTP GENERATE
+// ==========================
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// ==========================
+// JWT TOKEN
+// ==========================
+function signToken(userId, role) {
+  return jwt.sign(
+    { userId, role },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    }
+  );
+}
+
+// ==========================
+// SEND OTP EMAIL
+// ==========================
 async function sendOTPEmail(email, otp) {
   try {
     await resend.emails.send({
@@ -30,48 +54,6 @@ async function sendOTPEmail(email, otp) {
 }
 
 // ==========================
-// OTP GENERATE
-// ==========================
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-// ==========================
-// JWT TOKEN
-// ==========================
-function signToken(userId, role) {
-  return jwt.sign(
-    { userId, role },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-}
-
-// ==========================
-// SEND OTP EMAIL
-// ==========================
-function sendOTPEmail(email, otp) {
-  transporter.sendMail({
-    from: `"HEALTH CARE+" <${process.env.SMTP_USER}>`,
-    to: email,
-    subject: 'HEALTH CARE+ OTP Verification',
-    html: `
-      <div style="font-family:Arial;padding:20px">
-        <h2>HEALTH CARE+</h2>
-        <h1>${otp}</h1>
-        <p>Your OTP is valid for 10 minutes.</p>
-      </div>
-    `,
-  })
-    .then(() => {
-      console.log('✅ OTP email sent');
-    })
-    .catch((err) => {
-      console.log('❌ Email error:', err.message);
-    });
-}
-
-// ==========================
 // SIGNUP
 // ==========================
 exports.signup = async (req, res) => {
@@ -91,28 +73,45 @@ exports.signup = async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 10);
+
     const userId = uuidv4();
 
     // CREATE USER
     await pool.query(
-      `INSERT INTO users 
+      `INSERT INTO users
       (id, email, phone, password_hash, role, is_active)
       VALUES ($1,$2,$3,$4,$5,true)`,
-      [userId, email, phone || '', hash, role]
+      [
+        userId,
+        email,
+        phone || '',
+        hash,
+        role,
+      ]
     );
 
     // CREATE PROFILE
     if (role === 'doctor') {
       await pool.query(
-        `INSERT INTO doctor_profiles (user_id, name, email)
-         VALUES ($1,$2,$3)`,
-        [userId, name || '', email]
+        `INSERT INTO doctor_profiles
+        (user_id, name, email)
+        VALUES ($1,$2,$3)`,
+        [
+          userId,
+          name || '',
+          email,
+        ]
       );
     } else {
       await pool.query(
-        `INSERT INTO patient_profiles (user_id, name, email)
-         VALUES ($1,$2,$3)`,
-        [userId, name || '', email]
+        `INSERT INTO patient_profiles
+        (user_id, name, email)
+        VALUES ($1,$2,$3)`,
+        [
+          userId,
+          name || '',
+          email,
+        ]
       );
     }
 
@@ -123,10 +122,14 @@ exports.signup = async (req, res) => {
       `INSERT INTO otp_verifications
       (user_id, otp_code, contact, expiry_time)
       VALUES ($1,$2,$3,NOW() + INTERVAL '10 minutes')`,
-      [userId, otp, email]
+      [
+        userId,
+        otp,
+        email,
+      ]
     );
 
-    // ✅ NON BLOCKING EMAIL
+    // SEND EMAIL
     setImmediate(() => {
       sendOTPEmail(email, otp);
     });
@@ -139,6 +142,7 @@ exports.signup = async (req, res) => {
 
   } catch (err) {
     console.log('❌ Signup error:', err);
+
     res.status(500).json({
       success: false,
       message: 'Signup failed',
@@ -186,10 +190,14 @@ exports.login = async (req, res) => {
       `INSERT INTO otp_verifications
       (user_id, otp_code, contact, expiry_time)
       VALUES ($1,$2,$3,NOW() + INTERVAL '10 minutes')`,
-      [user.id, otp, email]
+      [
+        user.id,
+        otp,
+        email,
+      ]
     );
 
-    // ✅ NON BLOCKING EMAIL
+    // SEND EMAIL
     setImmediate(() => {
       sendOTPEmail(email, otp);
     });
@@ -263,7 +271,7 @@ exports.verifyOtp = async (req, res) => {
 
     const role = userResult.rows[0].role;
 
-    // JWT TOKEN
+    // CREATE TOKEN
     const token = signToken(userId, role);
 
     res.json({
