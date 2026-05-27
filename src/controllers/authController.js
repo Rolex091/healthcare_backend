@@ -3,17 +3,31 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 const pool = require('../config/db');
 
 // ✅ TRANSPORTER
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+async function sendOTPEmail(email, otp) {
+  try {
+    await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to: email,
+      subject: 'HEALTH CARE+ OTP',
+      html: `
+        <div style="font-family:Arial;padding:20px">
+          <h2>HEALTH CARE+</h2>
+          <h1>${otp}</h1>
+          <p>Your OTP is valid for 10 minutes.</p>
+        </div>
+      `,
+    });
+
+    console.log('✅ OTP email sent');
+  } catch (err) {
+    console.log('❌ Resend error:', err.message);
+  }
+}
 
 // ==========================
 // OTP GENERATE
