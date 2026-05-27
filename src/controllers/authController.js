@@ -130,7 +130,7 @@ exports.signup = async (req, res) => {
     );
 
     // SEND EMAIL
-    await sendOTPEmail(email, otp);
+    sendOTPEmail(email, otp);
 
     res.json({
       success: true,
@@ -196,7 +196,8 @@ exports.login = async (req, res) => {
     );
 
     // SEND EMAIL
-    await sendOTPEmail(email, otp);
+    sendOTPEmail(email, otp);
+
     res.json({
       success: true,
       message: 'OTP sent successfully',
