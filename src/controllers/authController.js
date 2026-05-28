@@ -3,39 +3,14 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
 const pool = require('../config/db');
-//debugger//
-console.log("SMTP DEBUG:");
 
-console.log({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  user: process.env.SMTP_USER,
-  passExists: !!process.env.SMTP_PASS,
-});
 // ==========================
-// BREVO SMTP CONFIG
+// SENDGRID CONFIG
 // ==========================
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-//another debugger
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log("SMTP VERIFY ERROR:", error);
-  } else {
-    console.log("SMTP SERVER READY");
-  }
-});
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // ==========================
 // OTP GENERATE
@@ -61,20 +36,29 @@ function signToken(userId, role) {
 // SEND OTP EMAIL
 // ==========================
 async function sendOTPEmail(email, otp) {
-  transporter.sendMail({
-    from: `"HEALTH CARE+" <${process.env.SMTP_USER}>`,
-    to: email,
-    subject: 'HEALTH CARE+ OTP',
-    html: `
-      <div style="font-family:Arial;padding:20px">
-        <h2>HEALTH CARE+</h2>
-        <h1>${otp}</h1>
-        <p>Your OTP is valid for 10 minutes.</p>
-      </div>
-    `,
-  })
-    .then(() => console.log('✅ OTP email sent'))
-    .catch((err) => console.log('❌ Email error:', err.message));
+  try {
+    await sgMail.send({
+      to: email,
+
+      // IMPORTANT:
+      // This email must be verified in SendGrid
+      from: 'HEALTH CARE+ <hariships12@gmail.com>',
+
+      subject: 'HEALTH CARE+ OTP',
+
+      html: `
+        <div style="font-family:Arial;padding:20px">
+          <h2>HEALTH CARE+</h2>
+          <h1>${otp}</h1>
+          <p>Your OTP is valid for 10 minutes.</p>
+        </div>
+      `,
+    });
+
+    console.log('✅ OTP email sent');
+  } catch (err) {
+    console.log('❌ Email error:', err.message);
+  }
 }
 
 // ==========================
@@ -105,6 +89,7 @@ exports.signup = async (req, res) => {
       `INSERT INTO users
       (id, email, phone, password_hash, role, is_active)
       VALUES ($1,$2,$3,$4,$5,true)`,
+
       [
         userId,
         email,
@@ -120,6 +105,7 @@ exports.signup = async (req, res) => {
         `INSERT INTO doctor_profiles
         (user_id, name, email)
         VALUES ($1,$2,$3)`,
+
         [
           userId,
           name || '',
@@ -131,6 +117,7 @@ exports.signup = async (req, res) => {
         `INSERT INTO patient_profiles
         (user_id, name, email)
         VALUES ($1,$2,$3)`,
+
         [
           userId,
           name || '',
@@ -146,6 +133,7 @@ exports.signup = async (req, res) => {
       `INSERT INTO otp_verifications
       (user_id, otp_code, contact, expiry_time)
       VALUES ($1,$2,$3,NOW() + INTERVAL '10 minutes')`,
+
       [
         userId,
         otp,
@@ -154,7 +142,7 @@ exports.signup = async (req, res) => {
     );
 
     // SEND EMAIL
-    sendOTPEmail(email, otp);
+    await sendOTPEmail(email, otp);
 
     res.json({
       success: true,
@@ -212,6 +200,7 @@ exports.login = async (req, res) => {
       `INSERT INTO otp_verifications
       (user_id, otp_code, contact, expiry_time)
       VALUES ($1,$2,$3,NOW() + INTERVAL '10 minutes')`,
+
       [
         user.id,
         otp,
@@ -220,7 +209,7 @@ exports.login = async (req, res) => {
     );
 
     // SEND EMAIL
-    sendOTPEmail(email, otp);
+    await sendOTPEmail(email, otp);
 
     res.json({
       success: true,
@@ -251,6 +240,7 @@ exports.verifyOtp = async (req, res) => {
        WHERE user_id = $1
        ORDER BY created_at DESC
        LIMIT 1`,
+
       [userId]
     );
 
