@@ -28,6 +28,14 @@ const transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASS,
   },
 });
+//another debugger
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("SMTP VERIFY ERROR:", error);
+  } else {
+    console.log("SMTP SERVER READY");
+  }
+});
 
 // ==========================
 // OTP GENERATE
