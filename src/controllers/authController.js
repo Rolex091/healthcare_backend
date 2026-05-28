@@ -6,7 +6,16 @@ const { v4: uuidv4 } = require('uuid');
 const nodemailer = require('nodemailer');
 
 const pool = require('../config/db');
+//debugger//
+console.log("SMTP DEBUG:");
 
+console.log({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  user: process.env.SMTP_USER,
+  passExists: !!process.env.SMTP_PASS,
+});
 // ==========================
 // BREVO SMTP CONFIG
 // ==========================
