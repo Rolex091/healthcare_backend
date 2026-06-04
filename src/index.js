@@ -21,12 +21,23 @@ const app = express();
 const server = http.createServer(app);
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:3001', 'http://localhost:8080', 'http://localhost:51434', 'http://localhost:64283'];
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(cors({
-  origin: true,
+  origin(origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
 }));
 // ─── Body Parsers ─────────────────────────────────────────────────────────────

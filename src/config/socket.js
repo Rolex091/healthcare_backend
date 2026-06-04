@@ -7,12 +7,24 @@ let io;
  */
 function initSocket(server) {
   const { Server } = require('socket.io');
+  const allowedOrigins = (process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   io = new Server(server, {
     cors: {
-      origin: process.env.CORS_ORIGIN
-        ? process.env.CORS_ORIGIN.split(',')
-        : ['http://localhost:3001', 'http://localhost:8080'],
+      origin(origin, callback) {
+        if (!origin) {
+          return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        return callback(new Error(`Socket origin blocked: ${origin}`));
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },
