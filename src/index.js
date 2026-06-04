@@ -44,9 +44,15 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ─── Static Files (uploaded certificates) ────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// ─── Uploads Directory ───────────────────────────────────────────────────────
+const uploadsDir = path.join(__dirname, '../uploads');
 
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// ─── Static Files (uploaded certificates) ────────────────────────────────────
+app.use('/uploads', express.static(uploadsDir));
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
