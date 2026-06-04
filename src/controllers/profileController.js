@@ -1,5 +1,8 @@
 // src/controllers/profileController.js — Profile management
 const pool = require('../config/db');
+const supabase = require('../config/supabase');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 // ─── GET /profile/:userId ────────────────────────────────────────────────────
 exports.getProfile = async (req, res, next) => {
@@ -156,7 +159,32 @@ exports.uploadCertificate = async (req, res, next) => {
     }
 
     const userId = req.user.id;
-    const fileUrl = `/uploads/${req.file.filename}`;
+    const ext = path.extname(req.file.originalname);
+    const fileName = `cert_${uuidv4()}${ext}`;
+
+    // Upload the file buffer to Supabase Storage in the 'certificates' bucket
+    const { data, error } = await supabase.storage
+      .from('certificates')
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload certificate to Supabase Storage',
+        error: error.message,
+      });
+    }
+
+    // Retrieve the public URL of the uploaded certificate
+    const { data: publicUrlData } = supabase.storage
+      .from('certificates')
+      .getPublicUrl(fileName);
+
+    const fileUrl = publicUrlData.publicUrl;
 
     await pool.query(
       `UPDATE doctor_profiles 
@@ -171,7 +199,7 @@ exports.uploadCertificate = async (req, res, next) => {
       data: { fileUrl },
     });
   } catch (err) {
-    console.error(err);
+    console.error('Upload certificate catch error:', err);
     next(err);
   }
 };

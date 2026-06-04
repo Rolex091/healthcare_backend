@@ -3,8 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const fs = require('fs');
 const path = require('path');
-
 const { initSocket } = require('./config/socket');
 const { startReminderCron } = require('./controllers/remindersController');
 const errorHandler = require('./middleware/errorHandler');
@@ -44,15 +44,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ─── Uploads Directory ───────────────────────────────────────────────────────
-const uploadsDir = path.join(__dirname, '../uploads');
-
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// ─── Static Files (uploaded certificates) ────────────────────────────────────
-app.use('/uploads', express.static(uploadsDir));
+// Certificates are stored in and served from Supabase Storage public URL
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
