@@ -16,7 +16,6 @@ const profileRoutes = require('./routes/profile');
 const agoraRoutes = require('./routes/agora');
 const remindersRoutes = require('./routes/reminders');
 const chatRoutes = require('./routes/chat');
-const reportsRoutes = require('./routes/reports');
 
 const app = express();
 const server = http.createServer(app);
@@ -57,7 +56,6 @@ app.use('/profile', profileRoutes);
 app.use('/agora', agoraRoutes);
 app.use('/reminders', remindersRoutes);
 app.use('/chat', chatRoutes);
-app.use('/reports', reportsRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
