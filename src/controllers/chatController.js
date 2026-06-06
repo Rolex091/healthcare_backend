@@ -208,12 +208,12 @@ exports.getContacts = async (req, res, next) => {
           dp.bio, 
           dp.email, 
           dp.phone,
-          u.last_seen,
+          
           (
             SELECT COALESCE(COUNT(*)::int, 0)
             FROM chat_messages m
             JOIN chat_participants cp ON cp.chat_id = m.chat_id
-            WHERE cp.user_id = $1 AND m.sender_id = dp.user_id AND m.is_read = false
+            WHERE cp.user_id = $1 AND m.sender_id = dp.user_id::text AND m.is_read = false
           ) AS unread_count
          FROM appointments a
          JOIN doctor_profiles dp ON dp.user_id = a.doctor_id
@@ -233,13 +233,12 @@ exports.getContacts = async (req, res, next) => {
           pp.blood_group, 
           pp.medical_history, 
           pp.mobile, 
-          pp.email,
-          u.last_seen,
+          pp.email
           (
             SELECT COALESCE(COUNT(*)::int, 0)
             FROM chat_messages m
             JOIN chat_participants cp ON cp.chat_id = m.chat_id
-            WHERE cp.user_id = $1 AND m.sender_id = pp.user_id AND m.is_read = false
+            WHERE cp.user_id = $1 AND m.sender_id = pp.user_id::text AND m.is_read = false
           ) AS unread_count
          FROM appointments a
          JOIN patient_profiles pp ON pp.user_id = a.patient_id
@@ -284,9 +283,9 @@ exports.getOrCreateRoom = async (req, res, next) => {
     );
 
     if (appointmentCheck.rows.length === 0) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied: You can only chat with users with whom you have appointments.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You can only chat with users with whom you have appointments.'
       });
     }
 
@@ -373,7 +372,7 @@ exports.sendChatMessage = async (req, res, next) => {
     }
 
     const messageText = message || (fileUrl ? `Sent a file: ${req.file.originalname}` : '');
-    
+
     if (!messageText) {
       return res.status(400).json({ success: false, message: 'Message cannot be empty' });
     }
