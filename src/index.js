@@ -3,8 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+
+
 const { initSocket } = require('./config/socket');
 const { startReminderCron } = require('./controllers/remindersController');
 const errorHandler = require('./middleware/errorHandler');
@@ -16,33 +16,28 @@ const profileRoutes = require('./routes/profile');
 const agoraRoutes = require('./routes/agora');
 const remindersRoutes = require('./routes/reminders');
 const chatRoutes = require('./routes/chat');
+const reportsRoutes = require('./routes/reports');
 
 const app = express();
 const server = http.createServer(app);
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CORS_ORIGIN || '')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
 app.use(cors({
-  origin(origin, callback) {
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
+  origin: true,
   credentials: true,
 }));
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve uploads folder locally for sandbox/development fallback
+const fs = require('fs');
+const path = require('path');
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // Certificates are stored in and served from Supabase Storage public URL
 // ─── Health Check ─────────────────────────────────────────────────────────────
@@ -62,6 +57,7 @@ app.use('/profile', profileRoutes);
 app.use('/agora', agoraRoutes);
 app.use('/reminders', remindersRoutes);
 app.use('/chat', chatRoutes);
+app.use('/reports', reportsRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {

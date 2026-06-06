@@ -1,6 +1,7 @@
 // src/controllers/profileController.js — Profile management
 const pool = require('../config/db');
 const supabase = require('../config/supabase');
+const { uploadFile } = require('../utils/storage');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
@@ -162,29 +163,8 @@ exports.uploadCertificate = async (req, res, next) => {
     const ext = path.extname(req.file.originalname);
     const fileName = `cert_${uuidv4()}${ext}`;
 
-    // Upload the file buffer to Supabase Storage in the 'certificates' bucket
-    const { data, error } = await supabase.storage
-      .from('certificates')
-      .upload(fileName, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: true,
-      });
-
-    if (error) {
-      console.error('Supabase upload error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to upload certificate to Supabase Storage',
-        error: error.message,
-      });
-    }
-
-    // Retrieve the public URL of the uploaded certificate
-    const { data: publicUrlData } = supabase.storage
-      .from('certificates')
-      .getPublicUrl(fileName);
-
-    const fileUrl = publicUrlData.publicUrl;
+    // Upload the file using the storage utility
+    const fileUrl = await uploadFile('certificates', req.file);
 
     await pool.query(
       `UPDATE doctor_profiles 
