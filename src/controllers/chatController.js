@@ -233,7 +233,7 @@ exports.getContacts = async (req, res, next) => {
           pp.blood_group, 
           pp.medical_history, 
           pp.mobile, 
-          pp.email
+          pp.email,
           (
             SELECT COALESCE(COUNT(*)::int, 0)
             FROM chat_messages m
